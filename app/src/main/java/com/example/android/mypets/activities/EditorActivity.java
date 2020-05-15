@@ -6,6 +6,7 @@ import androidx.core.app.NavUtils;
 import android.content.ContentValues;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.net.Uri;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
@@ -73,17 +74,25 @@ public class EditorActivity extends AppCompatActivity {
         values.put(PetContract.PetEntry.COLUMN_PET_GENDER, mGender);
         values.put(PetContract.PetEntry.COLUMN_PET_WEIGHT,petWeight);
 
-        PetDbHelper mDbHelper = new PetDbHelper(this);
+      // no need  PetDbHelper mDbHelper = new PetDbHelper(this);
 
-        // Create and/or open a database to read from it
-        SQLiteDatabase db = mDbHelper.getWritableDatabase();
-        long newRowId =db.insert(PetContract.PetEntry.TABLE_NAME, null, values);
-        Log.v("catalg activity", "new row id "+newRowId);
-        if(newRowId== -1){
-            Toast.makeText(this, "errrrrrrrrrrror " + newRowId, Toast.LENGTH_SHORT).show();
-        }else {
-            Toast.makeText(this, "hiiiiiiiiiiiiiiiiiii " + newRowId, Toast.LENGTH_SHORT).show();
+        // Insert a new row for Toto into the provider using the ContentResolver.
+        // Use the {@link PetEntry#CONTENT_URI} to indicate that we want to insert
+        // into the pets database table.
+        // Receive the new content URI that will allow us to access Toto's data in the future.
+        Uri newUri = getContentResolver().insert(PetEntry.CONTENT_URI, values);
+        Log.v("catalg activity", "new row id "+newUri);
+        // Show a toast message depending on whether or not the insertion was successful
+        if (newUri == null) {
+            // If the new content URI is null, then there was an error with insertion.
+            Toast.makeText(this, getString(R.string.editor_insert_pet_failed),
+                    Toast.LENGTH_SHORT).show();
+        } else {
+            // Otherwise, the insertion was successful and we can display a toast.
+            Toast.makeText(this, getString(R.string.editor_insert_pet_successful),
+                    Toast.LENGTH_SHORT).show();
         }
+
     }
 
 
@@ -94,15 +103,16 @@ public class EditorActivity extends AppCompatActivity {
     private void displayDatabaseInfo() {
         // To access our database, we instantiate our subclass of SQLiteOpenHelper
         // and pass the context, which is the current activity.
-        PetDbHelper mDbHelper = new PetDbHelper(this);
+      // no need  PetDbHelper mDbHelper = new PetDbHelper(this);
 
         // Create and/or open a database to read from it
-        SQLiteDatabase db = mDbHelper.getReadableDatabase();
+      // no need  SQLiteDatabase db = mDbHelper.getReadableDatabase();
 
 
         // Perform this raw SQL query "SELECT * FROM pets"
         // to get a Cursor that contains all rows from the pets table.
-        Cursor cursor = db.rawQuery("SELECT * FROM " + PetContract.PetEntry.TABLE_NAME, null);
+
+        Cursor cursor =getContentResolver().query(PetEntry.CONTENT_URI, null, null, null,null);
         try {
             // Display the number of rows in the Cursor (which reflects the number of rows in the
             // pets table in the database).

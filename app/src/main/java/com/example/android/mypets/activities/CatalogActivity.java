@@ -1,7 +1,11 @@
 package com.example.android.mypets.activities;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.loader.app.LoaderManager;
+import androidx.loader.content.Loader;
 
 import android.content.ContentResolver;
 import android.content.ContentValues;
@@ -14,17 +18,19 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.android.mypets.R;
+import com.example.android.mypets.activities.adapter.PetCursorAdapter;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import com.example.android.mypets.activities.data.PetContract;
 import com.example.android.mypets.activities.data.PetDbHelper;
 
-public class CatalogActivity extends AppCompatActivity {
-
+public class CatalogActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor> {
+private static final int PET_LOADER = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,14 +47,12 @@ public class CatalogActivity extends AppCompatActivity {
             }
         });
 
-
-
     }
     // we add this method to refresh the list with new pet in the database
     @Override
     protected void onStart() {
         super.onStart();
-        displayDatabaseInfo();
+      displayDatabaseInfo();
     }
 
     /**
@@ -56,61 +60,32 @@ public class CatalogActivity extends AppCompatActivity {
      * the pets database.
      */
     private void displayDatabaseInfo() {
-        // To access our database, we instantiate our subclass of SQLiteOpenHelper
-        // and pass the context, which is the current activity.
         // Define a projection that specifies which columns from the database
         // you will actually use after this query.
         String[] projection = {
-                PetContract.PetEntry._ID,
+               PetContract.PetEntry._ID,
                 PetContract.PetEntry.COLUMN_PET_NAME,
                 PetContract.PetEntry.COLUMN_PET_BREED,
                 PetContract.PetEntry.COLUMN_PET_GENDER,
                 PetContract.PetEntry.COLUMN_PET_WEIGHT };
-        String selection = PetContract.PetEntry.COLUMN_PET_GENDER + "=?";
-        String []selectionArgs = new String[] {String.valueOf(PetContract.PetEntry.GENDER_MALE)};
+        // Perform a query on the provider using the ContentResolver.
+        // Use the {@link PetEntry#CONTENT_URI} to access the pet data.
+        Cursor cursor = getContentResolver().query(
+                PetContract.PetEntry.CONTENT_URI,   // The content URI of the words table
+                projection,             // The columns to return for each row
+                null,                   // Selection criteria
+                null,                   // Selection criteria
+                null);                  // The sort order for the returned rows
 
-        // Perform a query on the pets table
-        Cursor cursor =getContentResolver().query(PetContract.PetEntry.CONTENT_URI, projection,
-                selection, selectionArgs,null,null);
-               TextView displayView = (TextView) findViewById(R.id.text_view_pet);
-                  try {
-            displayView.setText("The pets table contains " + cursor.getCount() + " pets.\n\n");
-            displayView.append(PetContract.PetEntry._ID + " - " +
-                    PetContract.PetEntry.COLUMN_PET_NAME + " - " +
-                    PetContract.PetEntry.COLUMN_PET_BREED + " - " +
-                    PetContract.PetEntry.COLUMN_PET_GENDER + " - " +
-                    PetContract.PetEntry.COLUMN_PET_WEIGHT + "\n");
-
-            // Figure out the index of each column
-            int idColumnIndex = cursor.getColumnIndex(PetContract.PetEntry._ID);
-            int nameColumnIndex = cursor.getColumnIndex(PetContract.PetEntry.COLUMN_PET_NAME);
-            int breedColumnIndex = cursor.getColumnIndex(PetContract.PetEntry.COLUMN_PET_BREED);
-            int genderColumnIndex = cursor.getColumnIndex(PetContract.PetEntry.COLUMN_PET_GENDER);
-            int weightColumnIndex = cursor.getColumnIndex(PetContract.PetEntry.COLUMN_PET_WEIGHT);
-
-
-                      // Iterate through all the returned rows in the cursor
-                      while (cursor.moveToNext()) {
-                          // Use that index to extract the String or Int value of the word
-                          // at the current row the cursor is on.
-                          int currentID = cursor.getInt(idColumnIndex);
-                          String currentName = cursor.getString(nameColumnIndex);
-                          String currentBreed = cursor.getString(breedColumnIndex);
-                          int currentGender = cursor.getInt(genderColumnIndex);
-                          int currentWeight = cursor.getInt(weightColumnIndex);
-                          // Display the values from each column of the current row in the cursor in the TextView
-                          displayView.append(("\n" + currentID + " - " +
-                                  currentName + " - " +
-                                  currentBreed + " - " +
-                                  currentGender + " - " +
-                                  currentWeight));
-                      }
-
-        } finally {
-            // Always close the cursor when you're done reading from it. This releases all its
-            // resources and makes it invalid.
-            cursor.close();
-        }
+                  // Find the ListView which will be populated with the pet data
+                  ListView petListView = (ListView) findViewById(R.id.list);
+                  // Setup an Adapter to create a list item for each row of pet data in the Cursor.
+                 // Find and set empty view on the ListView, so that it only shows when the list has 0 items.
+                 View emptyView = findViewById(R.id.empty_view);
+                petListView.setEmptyView(emptyView);
+                      PetCursorAdapter adapter = new PetCursorAdapter(this, cursor);
+                  // Attach the adapter to the ListView.
+                  petListView.setAdapter(adapter);
     }
     /**
      * Helper method to insert hardcoded pet data into the database. For debugging purposes only.
@@ -142,7 +117,7 @@ public class CatalogActivity extends AppCompatActivity {
             case R.id.action_insert_dummy_data:
                 // Do nothing for now
                 insertPet();
-                displayDatabaseInfo();
+               displayDatabaseInfo();
                 return true;
             // Respond to a click on the "Delete all entries" menu option
             case R.id.action_delete_all_entries:
@@ -150,5 +125,21 @@ public class CatalogActivity extends AppCompatActivity {
                 return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    @NonNull
+    @Override
+    public Loader <Cursor> onCreateLoader(int id, @Nullable Bundle args) {
+        return null;
+    }
+
+    @Override
+    public void onLoadFinished(@NonNull Loader <Cursor> loader, Cursor data) {
+
+    }
+
+    @Override
+    public void onLoaderReset(@NonNull Loader <Cursor> loader) {
+
     }
 }
